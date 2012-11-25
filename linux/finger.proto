@@ -1,0 +1,15 @@
+message FingerLoginRequest {
+
+}  
+
+message FingerLoginResponse {
+  required int32  user_id= 2;
+}  
+message FingerUpdateRequest {
+  required int32  cmd = 1;
+}
+
+message FingerUpdateResponse {
+  required int32  cmd    = 1;
+  required int32  user_id= 2;
+}
