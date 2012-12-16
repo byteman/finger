@@ -12,7 +12,7 @@ bool CFingerMgr::has_finger(void)
 {
 	m_ret = m_finger_dev.gen_image();
 
-	return (ERR_OK == m_ret);
+    return (ERR_FINGER_OK == m_ret);
 
 }
 int CFingerMgr::login()
@@ -22,7 +22,7 @@ int CFingerMgr::login()
 	if(!has_finger()) return -1;
 	m_ret = m_finger_dev.search_finger(PAGE_BEGIN,PAGE_END,page);
 	
-	if(m_ret != ERR_OK)
+    if(m_ret != ERR_FINGER_OK)
 	{
 		return -2;
 	}
@@ -38,7 +38,7 @@ int CFingerMgr::clear_fingers(void)
 {
 	
 	m_ret = m_finger_dev.empty();
-	if (ERR_OK != m_ret)
+    if (ERR_FINGER_OK != m_ret)
 	{
 		return -1;
 	}
@@ -56,7 +56,7 @@ int CFingerMgr::upload_info(int id, unsigned char* finger_data, int len, int &pa
 	if(m_init_ok)
 	{
 		
-		int buff_id = 0;
+        int buff_id = 1;
         int npage = m_db.LookForPageById(id);
         if(npage == -1)
 		{
@@ -65,13 +65,13 @@ int CFingerMgr::upload_info(int id, unsigned char* finger_data, int len, int &pa
 		}
         page = npage;
         m_ret = m_finger_dev.upload_to_feature_buffer(buff_id,npage);
-        if(ERR_OK != m_ret)
+        if(ERR_FINGER_OK != m_ret)
 		{
             printf("err:%s\n",m_finger_dev.format_error (m_ret));
 			return -2;
 		}
         m_ret =m_finger_dev.upload_to_buffer(buff_id,finger_data,len,m_param.packet_size);
-        if(ERR_OK != m_ret)
+        if(ERR_FINGER_OK != m_ret)
 		{
 			printf("err:%s\n",m_finger_dev.format_error (m_ret));
 			return -3;
@@ -84,21 +84,22 @@ int CFingerMgr::download_info(int id, int page,unsigned char* finger_data, int l
 {
 	if(m_init_ok){
 
-		int buff_id = 0;
-		m_ret = m_finger_dev.download_to_buffer(buff_id,finger_data,len,m_param.packet_size);
+        int buff_id = 1;
 
-		if(m_ret != ERR_OK) return -1;
+        m_ret = m_finger_dev.download_to_buffer(buff_id,finger_data,len,m_param.packet_size);
+
+        if(m_ret != ERR_FINGER_OK) return -1;
 
 
 		if( ( page < 0 )  || ( page >= m_param.num_fingers ) )
 		{
 			printf("page[%d] error\n",page);
 			return -2;
-		}
+        }
 
 		m_ret = m_finger_dev.store_finger(buff_id,page);
 
-		if(m_ret != ERR_OK) 
+        if(m_ret != ERR_FINGER_OK)
 			return -3;
 
 		if(m_db.SaveWorker(page,id,version)== false) 
@@ -132,7 +133,7 @@ int CFingerMgr::get_finger_num(void)
 	unsigned short num = 0;
 
 	m_ret = m_finger_dev.read_finger_num(num);
-	if(m_ret == ERR_OK)
+    if(m_ret == ERR_FINGER_OK)
 	{
 		return num;
 	}
@@ -162,12 +163,12 @@ int CFingerMgr::init(const char* inf_dev, int baud)
 {
 
 	m_ret = m_finger_dev.OpenInterface(inf_dev,baud);
-	if(m_ret != ERR_OK)
+    if(m_ret != ERR_FINGER_OK)
 	{
 		return m_ret;
 	}
 	m_ret = m_finger_dev.authen(DEF_ADDR,DEF_PWD);
-	if(ERR_OK != m_ret)
+    if(ERR_FINGER_OK != m_ret)
 	{
 		return m_ret;
 	}
@@ -178,7 +179,7 @@ int CFingerMgr::init(const char* inf_dev, int baud)
 	}
 	m_ret = m_finger_dev.get_dev_pararm(m_param);
 
-	if(ERR_OK != m_ret) 
+    if(ERR_FINGER_OK != m_ret)
 	{
 		printf("load device param failed\n");
 		return -3;
@@ -215,7 +216,7 @@ int CFingerMgr::record_finger(int page,int id,int version)
 	//int finger_page = lookfor_page_by_id(id);
 	//单次录入指纹，并将指纹保存到指定的页码中
     m_ret = m_finger_dev.auto_record_finger(page);
-    if(ERR_OK != m_ret)
+    if(ERR_FINGER_OK != m_ret)
 	{
 		return -2;
 	}
@@ -233,7 +234,7 @@ int  CFingerMgr::gen_feature_up(unsigned char* buff, int buff_len)
 
 	m_ret = m_finger_dev.gen_feature_up(buff,buff_len,m_param.packet_size);
 
-	if(ERR_OK != m_ret)
+    if(ERR_FINGER_OK != m_ret)
 	{
 		return -1;
 	}

@@ -5,8 +5,9 @@
 /*!
 \brief 指纹模块错误码
 */
-typedef enum {
-	ERR_OK=0,				/*!< 成功*/
+typedef enum enum_FingerErr
+{
+    ERR_FINGER_OK = 0,				/*!< 成功*/
 	ERR_PACKET,			/*!< 包错误*/
 	ERR_NO_FINGER,		/*!< 传感器上无手指*/
 	ERR_GET_IMG,		/*!< 图像录入不成功*/
@@ -42,7 +43,7 @@ typedef enum {
 	ERR_TIMEOUT,		/*!<接收到的数据超时获取长度不对 */
 	ERR_RS232,			/*!<接口通信故障 */
 	ERR_GEN_TEMP_FAIL,  /*!<生成模板失败 */
-	ERR_INVALID_VAL,	/*!<参数错误 */
+    ERR_INVALID_VAL	/*!<参数错误 */
 
 }ERR_FINGER;
 

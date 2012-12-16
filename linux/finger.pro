@@ -9,7 +9,9 @@ SOURCES += \
     ../src/CppSQLite3.cpp \
     ../src/Finger.cpp \
     ../src/main.cpp \
-    ../src/Rs232_Ctb.cpp
+    ../src/src/serial.cpp \
+    ../src/src/impl/unix.cpp \
+    ../src/Rs2323.cpp
 
 
 HEADERS += \
@@ -18,23 +20,19 @@ HEADERS += \
     ../src/codec.h
 
 
-LIBS+= -ldl -lpthread
+LIBS+= -ldl -lpthread -lrt
 #LIBS+= -lprotobuf -lczmq
 OTHER_FILES += \
     ../src/ReadMe.txt \
     ../src/finger.db \
-    ../src/FGChar.dat \
     finger.proto
+INCLUDEPATH+=../extlib/include
 
 linux-arm-g++ {
     message(g++ = linux-arm-g++ compile)
-    LIBS+=../extlib/arm/libwxctb-0.9.a
-
-    INCLUDEPATH+=../extlib/include
 }
 
 linux-g++ {
     message(g++ = linux-g++)
-    INCLUDEPATH+=../extlib/include
-    LIBS+=../extlib/x86/libwxctb-0.9.a
 }
+

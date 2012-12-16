@@ -1,8 +1,8 @@
 #include <string.h>
 #include <cstdio>
 #include "Finger.h"
-#include "Rs232.h"
-
+#include "Rs2323.h"
+#include <assert.h>
 RS232Interface rs232;
 
 #define  CMD_PACKET  1
@@ -10,6 +10,7 @@ RS232Interface rs232;
 #define  ACK_PACKET  7
 #define  END_PACKET  8
 
+#define CHECK_BUF_ID(buf_id)  (assert( (buf_id==1) || (buf_id==2)))
 CFinger::CFinger()
 {
 	m_dev_password  = 0;
@@ -33,6 +34,7 @@ bool CFinger::RecvPacket(unsigned char* context, int len,int timeout)
 {
 	memset(context,0,len);
 	int t_len = rs232.Recv(context,len,timeout);
+    //printf("recv len = %d\n",t_len);
 	return (t_len==len);
 }
 
@@ -73,13 +75,13 @@ ERR_FINGER CFinger::OpenInterface(const char* path,int baud)
 	if(rs232.Open(path) == false)	 return ERR_RS232;
 	if(rs232.SetBaud(baud) == false) return ERR_RS232;
 
-	return ERR_OK;
+    return ERR_FINGER_OK;
 }
  
 ERR_FINGER CFinger::set_password(unsigned int password)
 {
 	unsigned char context[5];
-	ERR_FINGER ret = ERR_OK;
+    ERR_FINGER ret = ERR_FINGER_OK;
 	context[0] = 0x09;
 
 	context[1] = (password>>24)&0xFF;
@@ -105,7 +107,7 @@ ERR_FINGER CFinger::set_password(unsigned int password)
 ERR_FINGER CFinger::read_conlist(unsigned char index,unsigned int &conlist)
 {
 	unsigned char context[5];
-	ERR_FINGER ret = ERR_OK;
+    ERR_FINGER ret = ERR_FINGER_OK;
 
 	if( index > 3) return ERR_INVALID_VAL;
 
@@ -119,7 +121,7 @@ ERR_FINGER CFinger::read_conlist(unsigned char index,unsigned int &conlist)
 	if(RecvPacket(m_recvbuf,12,1000))
 	{
 		ret = (ERR_FINGER)m_recvbuf[9];
-		if(ret== ERR_OK)
+        if(ret== ERR_FINGER_OK)
 		{
 			conlist = (m_recvbuf[10] << 24) + (m_recvbuf[11] << 16) + (m_recvbuf[12] << 8)+(m_recvbuf[13]);
 		}
@@ -136,7 +138,7 @@ ERR_FINGER CFinger::read_conlist(unsigned char index,unsigned int &conlist)
 ERR_FINGER CFinger::read_finger_num(unsigned short &finger_num)
 {
 	unsigned char context[5];
-	ERR_FINGER ret = ERR_OK;
+    ERR_FINGER ret = ERR_FINGER_OK;
 		
 	context[0] = 0x1D;
 		
@@ -145,7 +147,7 @@ ERR_FINGER CFinger::read_finger_num(unsigned short &finger_num)
 	if(RecvPacket(m_recvbuf,14,1000))
 	{
 		ret = (ERR_FINGER)m_recvbuf[9];
-		if(ret== ERR_OK)
+        if(ret== ERR_FINGER_OK)
 		{
 			finger_num =  (m_recvbuf[10] << 8)+(m_recvbuf[11]);
 		}
@@ -161,7 +163,7 @@ ERR_FINGER CFinger::read_finger_num(unsigned short &finger_num)
 ERR_FINGER CFinger::set_address(unsigned int address)
 {
 	unsigned char context[5];
-	ERR_FINGER ret = ERR_OK;
+    ERR_FINGER ret = ERR_FINGER_OK;
 	context[0] = 0x09;
 	
 	context[1] = (address>>24)&0xFF;
@@ -187,7 +189,7 @@ ERR_FINGER CFinger::search_finger(unsigned short start_page, unsigned short num,
 {
 	unsigned char context[5];
 
-	ERR_FINGER ret = ERR_OK;
+    ERR_FINGER ret = ERR_FINGER_OK;
 
 
 	context[0] = 0x20;
@@ -201,7 +203,7 @@ ERR_FINGER CFinger::search_finger(unsigned short start_page, unsigned short num,
 	if(RecvPacket(m_recvbuf,16,1000))
 	{
 		ret = (ERR_FINGER)m_recvbuf[9] ;
-		if(ret == ERR_OK)
+        if(ret == ERR_FINGER_OK)
 		{
 			page = ((m_recvbuf[10]<<8) + m_recvbuf[11]);
 		}
@@ -219,7 +221,9 @@ ERR_FINGER CFinger::search_finger(unsigned short start_page, unsigned short num,
 ERR_FINGER CFinger::request_download_to_buffer(int buf_id)
 {
 	unsigned char context[5];
-	ERR_FINGER ret = ERR_OK;
+    ERR_FINGER ret = ERR_FINGER_OK;
+
+    CHECK_BUF_ID(buf_id);
 	context[0] = 0x09;
 	context[1] = (buf_id)&0xFF;
 	
@@ -242,8 +246,9 @@ ERR_FINGER CFinger::request_download_to_buffer(int buf_id)
 ERR_FINGER CFinger::store_finger(int buf_id,int page)
 {
 	unsigned char context[5];
-	ERR_FINGER ret = ERR_OK;
+    ERR_FINGER ret = ERR_FINGER_OK;
 
+    CHECK_BUF_ID(buf_id);
 	context[0] = 0x06;
 	context[1] = (buf_id)&0xFF;
 	context[2] = (page>>8)&0xFF;
@@ -251,7 +256,7 @@ ERR_FINGER CFinger::store_finger(int buf_id,int page)
 
 	SendPacket(CMD_PACKET,context,4);
 	
-	if(RecvPacket(m_recvbuf,12,1000))
+    if(RecvPacket(m_recvbuf,12,1000))
 	{
 		ret = (ERR_FINGER)m_recvbuf[9];
 	}
@@ -266,8 +271,8 @@ ERR_FINGER CFinger::store_finger(int buf_id,int page)
 ERR_FINGER CFinger::requst_upload_to_buffer(int buf_id)
 {
 	unsigned char context[5];
-	ERR_FINGER ret = ERR_OK;
-	
+    ERR_FINGER ret = ERR_FINGER_OK;
+    CHECK_BUF_ID(buf_id);
 	context[0] = 0x08;
 	context[1] = (buf_id)&0xFF;
 	
@@ -286,7 +291,7 @@ ERR_FINGER CFinger::requst_upload_to_buffer(int buf_id)
 }
 ERR_FINGER CFinger::upload_packet_to_buffer(unsigned char *buff,int pkt_size,bool &end)
 {
-	ERR_FINGER ret = ERR_OK;
+    ERR_FINGER ret = ERR_FINGER_OK;
 	
 	int ack_len = pkt_size+11;
 
@@ -322,7 +327,8 @@ ERR_FINGER CFinger::upload_packet_to_buffer(unsigned char *buff,int pkt_size,boo
 ERR_FINGER CFinger::upload_to_buffer(int buf_id,unsigned char *buff, int buff_len,int pkt_size)
 {
 
-	ERR_FINGER ret = ERR_OK;
+    ERR_FINGER ret = ERR_FINGER_OK;
+    CHECK_BUF_ID(buf_id);
 	if (buff_len < 512) ///模板文件长度不能大于512字节
 	{
 		
@@ -331,7 +337,7 @@ ERR_FINGER CFinger::upload_to_buffer(int buf_id,unsigned char *buff, int buff_le
 	
 	ret = requst_upload_to_buffer(buf_id);
 
-	if( ret != ERR_OK) return ret;
+    if( ret != ERR_FINGER_OK) return ret;
 	
 	int index = 0;
 
@@ -341,7 +347,7 @@ ERR_FINGER CFinger::upload_to_buffer(int buf_id,unsigned char *buff, int buff_le
 	{
 		ret = upload_packet_to_buffer(buff+index,pkt_size,end);
 		
-		if(ERR_OK != ret)
+        if(ERR_FINGER_OK != ret)
 		{
 			break;
 		}
@@ -358,8 +364,8 @@ ERR_FINGER CFinger::upload_to_buffer(int buf_id,unsigned char *buff, int buff_le
 ERR_FINGER CFinger::upload_to_feature_buffer(int buf_id,int page)
 {
 	unsigned char context[5];
-	ERR_FINGER ret = ERR_OK;
-	
+    ERR_FINGER ret = ERR_FINGER_OK;
+    CHECK_BUF_ID(buf_id);
 	context[0] = 0x07;
 	context[1] = (buf_id)&0xFF;
 	context[2] = (page>>8)&0xFF;
@@ -383,7 +389,7 @@ ERR_FINGER CFinger::download_packet_to_buffer(unsigned char* pkt_buff, int pkt_l
 
 	unsigned char context[512];
 
-	ERR_FINGER ret = ERR_OK;
+    ERR_FINGER ret = ERR_FINGER_OK;
 	unsigned char type = end?END_PACKET:DATA_PACKET;
 
 	memcpy(context,pkt_buff,pkt_len);
@@ -397,7 +403,8 @@ ERR_FINGER CFinger::download_packet_to_buffer(unsigned char* pkt_buff, int pkt_l
 ERR_FINGER CFinger::download_to_buffer(int buf_id,unsigned char *buff, int buff_len,int pkt_size)
 {
 	int left_len = buff_len;
-	ERR_FINGER ret = ERR_OK;
+    ERR_FINGER ret = ERR_FINGER_OK;
+    CHECK_BUF_ID(buf_id);
 	if (buff_len > 512) ///模板文件长度不能大于512字节
 	{
 		
@@ -405,8 +412,12 @@ ERR_FINGER CFinger::download_to_buffer(int buf_id,unsigned char *buff, int buff_
 	}
 
 	ret = request_download_to_buffer(buf_id);
-	if( ret != ERR_OK) return ret;
-
+    if( ret != ERR_FINGER_OK)
+    {
+        printf("request_download_to_buffer failed\n");
+        return ret;
+    }
+#if 1
 	int index = 0;
 	while(left_len > 0)
 	{
@@ -415,20 +426,25 @@ ERR_FINGER CFinger::download_to_buffer(int buf_id,unsigned char *buff, int buff_
 		bool end = (left_len <= pkt_size) ? true : false;
 
 		ret = download_packet_to_buffer(buff+index,send_len,end);
-		if(ret != ERR_OK)
+        //这里最好做一个延时操作,否则有可能后面的store_finger命令不会返回数据.
+
+        usleep (10000);
+        if(ret != ERR_FINGER_OK)
 		{
+            printf("download_packet_to_buffer failed\n");
 			break;
 		}
 		left_len -= send_len;
 		index	 += send_len;
 		
 	}
+#endif
 	return ret;
 }
 ERR_FINGER CFinger::authen(unsigned int addr,unsigned int password)
 {
 	unsigned char context[5];
-	ERR_FINGER ret = ERR_OK;
+    ERR_FINGER ret = ERR_FINGER_OK;
 	m_dev_password = password;
 	m_dev_addr	   = addr;
 	
@@ -457,7 +473,7 @@ ERR_FINGER CFinger::authen(unsigned int addr,unsigned int password)
 ERR_FINGER CFinger::gen_image(void)
 {
 	unsigned char context[5];
-	ERR_FINGER ret = ERR_OK;
+    ERR_FINGER ret = ERR_FINGER_OK;
 	context[0] = 0x1;
 
 	SendPacket(CMD_PACKET,context,1);
@@ -478,7 +494,7 @@ ERR_FINGER CFinger::gen_image(void)
 ERR_FINGER CFinger::upload_image(void)
 {
 	unsigned char context[5];
-	ERR_FINGER ret = ERR_OK;
+    ERR_FINGER ret = ERR_FINGER_OK;
 	context[0] = 0xa;
 	
 	SendPacket(CMD_PACKET,context,1);
@@ -499,7 +515,7 @@ ERR_FINGER CFinger::upload_image(void)
 ERR_FINGER CFinger::download_image(unsigned char* img_buf, int img_size,int pkt_size)
 {
 	unsigned char context[5];
-	ERR_FINGER ret = ERR_OK;
+    ERR_FINGER ret = ERR_FINGER_OK;
 	context[0] = 0xb;
 	
 	SendPacket(CMD_PACKET,context,1);
@@ -513,7 +529,7 @@ ERR_FINGER CFinger::download_image(unsigned char* img_buf, int img_size,int pkt_
 		ret = ERR_TIMEOUT;
 	}
 	
-	if(ret != ERR_OK) 	return ret;
+    if(ret != ERR_FINGER_OK) 	return ret;
 
 	int index = 0;
 	int left_len = img_size;
@@ -524,7 +540,7 @@ ERR_FINGER CFinger::download_image(unsigned char* img_buf, int img_size,int pkt_
 		bool end = (left_len <= pkt_size) ? true : false;
 		
 		ret = download_packet_to_buffer(img_buf+index,send_len,end);
-		if(ret != ERR_OK)
+        if(ret != ERR_FINGER_OK)
 		{
 			break;
 		}		
@@ -537,7 +553,9 @@ ERR_FINGER CFinger::download_image(unsigned char* img_buf, int img_size,int pkt_
 ERR_FINGER CFinger::img2tz(int buf_id)
 {
 	unsigned char context[5];
-	ERR_FINGER ret = ERR_OK;
+    ERR_FINGER ret = ERR_FINGER_OK;
+
+    CHECK_BUF_ID(buf_id);
 	context[0] = 0xb;
 	context[1] = (buf_id&0xFF);
 
@@ -557,7 +575,7 @@ ERR_FINGER CFinger::img2tz(int buf_id)
 ERR_FINGER CFinger::reg_model(void)
 {
 	unsigned char context[5];
-	ERR_FINGER ret = ERR_OK;
+    ERR_FINGER ret = ERR_FINGER_OK;
 	context[0] = 0x5;
 
 	
@@ -577,7 +595,7 @@ ERR_FINGER CFinger::reg_model(void)
 ERR_FINGER CFinger::get_random_code(unsigned int &random)
 {
 	unsigned char context[5];
-	ERR_FINGER ret = ERR_OK;
+    ERR_FINGER ret = ERR_FINGER_OK;
 	
 	context[0] = 0x14;
 	
@@ -586,7 +604,7 @@ ERR_FINGER CFinger::get_random_code(unsigned int &random)
 	if(RecvPacket(m_recvbuf,12,1000))
 	{
 		ret = (ERR_FINGER)m_recvbuf[9];
-		if(ret== ERR_OK)
+        if(ret== ERR_FINGER_OK)
 		{
 			random =  (m_recvbuf[10] << 24)+(m_recvbuf[11] << 16)+(m_recvbuf[12] << 8)+(m_recvbuf[13]);
 		}
@@ -602,7 +620,7 @@ ERR_FINGER CFinger::get_random_code(unsigned int &random)
 ERR_FINGER CFinger::empty(void)
 {
 	unsigned char context[5];
-	ERR_FINGER ret = ERR_OK;
+    ERR_FINGER ret = ERR_FINGER_OK;
 	context[0] = 0xd;
 	
 	
@@ -622,7 +640,7 @@ ERR_FINGER CFinger::empty(void)
 ERR_FINGER CFinger::del_char(unsigned short start_page, int num)
 {
 	unsigned char context[5];
-	ERR_FINGER ret = ERR_OK;
+    ERR_FINGER ret = ERR_FINGER_OK;
 	context[0] = 0xC;
 	context[1] = (start_page>>8)&0xFF;
 	context[2] = (start_page)&0xFF;
@@ -647,7 +665,7 @@ ERR_FINGER CFinger::read_note_page(unsigned char page,unsigned char *buff, int l
 {
 
 	unsigned char context[33];
-	ERR_FINGER ret = ERR_OK;
+    ERR_FINGER ret = ERR_FINGER_OK;
 	
 	if(len <  32)  return ERR_INVALID_VAL;
 	if(page > 0xe) return ERR_INVALID_VAL;
@@ -661,7 +679,7 @@ ERR_FINGER CFinger::read_note_page(unsigned char page,unsigned char *buff, int l
 	if(RecvPacket(m_recvbuf,44,1000))
 	{
 		ret = (ERR_FINGER)m_recvbuf[9];
-		if(ERR_OK == ret)
+        if(ERR_FINGER_OK == ret)
 		{
 			memcpy(buff,m_recvbuf+10,32);
 		}
@@ -691,7 +709,7 @@ void CFinger::dump_ack_buf(unsigned char *buff,int buff_size)
 ERR_FINGER CFinger::auto_record_finger(int page)
 {
 	unsigned char context[5];
-	ERR_FINGER ret = ERR_OK;
+    ERR_FINGER ret = ERR_FINGER_OK;
 
 	
 	context[0] = 0x21;
@@ -717,7 +735,8 @@ ERR_FINGER CFinger::auto_record_finger(int page)
 
 ERR_FINGER CFinger::gen_featrue_by_image(int buf_id)
 {
-	return ERR_OK;
+    CHECK_BUF_ID(buf_id);
+    return ERR_FINGER_OK;
 }
 
 
@@ -725,7 +744,7 @@ ERR_FINGER CFinger::write_note_page(unsigned char page,unsigned char *buff, int 
 {
 
 	unsigned char context[33];
-	ERR_FINGER ret = ERR_OK;
+    ERR_FINGER ret = ERR_FINGER_OK;
 	
 	if(len >  32)  return ERR_INVALID_VAL;
 	if(page > 0xe) return ERR_INVALID_VAL;
@@ -754,7 +773,7 @@ ERR_FINGER CFinger::get_dev_pararm(TDevParam& param)
 {
 
 	unsigned char context[5];
-	ERR_FINGER ret = ERR_OK;
+    ERR_FINGER ret = ERR_FINGER_OK;
 	unsigned short pkt_list[] = {32,64,128,256};
 	
 	context[0] = 0xF;
@@ -764,7 +783,7 @@ ERR_FINGER CFinger::get_dev_pararm(TDevParam& param)
 	if(RecvPacket(m_recvbuf,28,1000))
 	{
 		ret = (ERR_FINGER)m_recvbuf[9];
-		if(ERR_OK == ret )
+        if(ERR_FINGER_OK == ret )
 		{
 				param.status.status_value = ((m_recvbuf[10]<<8)+m_recvbuf[11]);
 				param.vid = ((m_recvbuf[12]<<8)+m_recvbuf[13]);
@@ -793,7 +812,7 @@ ERR_FINGER CFinger::set_dev_pararm(TDevParam& param)
 ERR_FINGER CFinger::set_bps(int bps)
 {
 	unsigned char context[5];
-	ERR_FINGER ret = ERR_OK;
+    ERR_FINGER ret = ERR_FINGER_OK;
 	
 	if( (bps < 1) || (bps > 12) ) return ERR_INVALID_VAL;
 	
@@ -818,7 +837,7 @@ ERR_FINGER CFinger::set_bps(int bps)
 ERR_FINGER CFinger::set_packet_size(unsigned short pkt_size)
 {
 	unsigned char context[5];
-	ERR_FINGER ret = ERR_OK;
+    ERR_FINGER ret = ERR_FINGER_OK;
 	
 	if(pkt_size!=32)  return ERR_INVALID_VAL;
 	if(pkt_size!=64)  return ERR_INVALID_VAL;
@@ -867,7 +886,7 @@ ERR_FINGER CFinger::set_packet_size(unsigned short pkt_size)
 ERR_FINGER  CFinger::request_gen_feature_up()
 {
 	unsigned char context[5];
-	ERR_FINGER ret = ERR_OK;
+    ERR_FINGER ret = ERR_FINGER_OK;
 
 	
 	context[0] = 0x31;
@@ -888,7 +907,7 @@ ERR_FINGER  CFinger::request_gen_feature_up()
 }
 ERR_FINGER  CFinger::gen_feature_up_data(unsigned char* buff,int pkt_size,bool &end)
 {
-	ERR_FINGER ret = ERR_OK;
+    ERR_FINGER ret = ERR_FINGER_OK;
 	
     if(RecvPacket(buff,pkt_size+11,1000))
 	{
@@ -921,10 +940,10 @@ ERR_FINGER  CFinger::gen_feature_up_data(unsigned char* buff,int pkt_size,bool &
 }
 ERR_FINGER  CFinger::gen_feature_up(unsigned char* buff, int buff_len,int pkt_size)
 {
-	ERR_FINGER ret = ERR_OK;
+    ERR_FINGER ret = ERR_FINGER_OK;
 
 	ret = request_gen_feature_up() ;
-	if( ret != ERR_OK)
+    if( ret != ERR_FINGER_OK)
 	{
 		return ret;
 	}
@@ -936,7 +955,7 @@ ERR_FINGER  CFinger::gen_feature_up(unsigned char* buff, int buff_len,int pkt_si
 	{
 		ret = gen_feature_up_data(buff+index,pkt_size,end);
 		
-		if(ERR_OK != ret)
+        if(ERR_FINGER_OK != ret)
 		{
 			break;
 		}
@@ -954,7 +973,7 @@ typedef struct tag_errItem{
 }ErrItem;
 static ErrItem err_list[] = {
 
-	{ERR_OK,				"成功"},
+    {ERR_FINGER_OK,				"成功"},
 	{ERR_PACKET,			"包错误"},
 	{ERR_NO_FINGER,			"传感器上无手指"},
 	{ERR_GET_IMG,			"图像录入不成功"},

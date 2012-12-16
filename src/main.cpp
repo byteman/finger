@@ -70,7 +70,7 @@ void dump_dev_param(CFingerMgr& mgr)
 {
 	TDevParam param;
 	
-	if(ERR_OK == mgr.m_finger_dev.get_dev_pararm(param))
+    if(ERR_FINGER_OK == mgr.m_finger_dev.get_dev_pararm(param))
 		CFingerMgr::dump_param(param);
 	else
 	{
@@ -225,14 +225,14 @@ void rw_note_test(CFingerMgr& mgr)
 	std::string text = "hello world";
 	ret = mgr.m_finger_dev.write_note_page(1,(unsigned char*)text.c_str(),text.length());
 
-	if(ERR_OK != ret)
+    if(ERR_FINGER_OK != ret)
 	{
 		printf("error:%s\n",CFinger::format_error(ret));
 		return;
 	}
 	char buf[33] = {0,};
 	ret = mgr.m_finger_dev.read_note_page(1,(unsigned char*)buf,33);
-	if(ERR_OK != ret)
+    if(ERR_FINGER_OK != ret)
 	{
 		printf("error:%s\n",CFinger::format_error(ret));
 		return;
